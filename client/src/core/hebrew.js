@@ -26,10 +26,15 @@ export const hebrewOfCivil = ({ y, m, d }) => plain(new HDate(new Date(y, m - 1,
 
 // ---- time zones ---------------------------------------------------------------------------------
 /** Wall-clock parts of an instant in an IANA zone. */
+const formatters = new Map() // building an Intl.DateTimeFormat is slow: one per zone
 export function zonedParts(instant, zone) {
-  const f = new Intl.DateTimeFormat('en-GB', {
-    timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-  })
+  let f = formatters.get(zone)
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-GB', {
+      timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    })
+    formatters.set(zone, f)
+  }
   const p = Object.fromEntries(f.formatToParts(instant).map((x) => [x.type, x.value]))
   return { y: +p.year, m: +p.month, d: +p.day, hh: +p.hour, mm: +p.minute }
 }

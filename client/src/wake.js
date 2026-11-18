@@ -87,7 +87,10 @@ export function markStale() {
   }
 }
 
+let started = false
 export function initWake() {
+  if (started) return
+  started = true
   checkServer()
   window.addEventListener('online', () => checkServer())
   window.addEventListener('offline', () => set({ status: 'offline' }))

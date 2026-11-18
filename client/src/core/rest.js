@@ -36,3 +36,15 @@ export function isRestTime(city, instant) {
     return t >= from && t <= to
   })
 }
+
+/** When the current quiet window ends (a Date), or null if it is not rest time. Scans forward in 10-minute steps. */
+export function restEnd(city, instant) {
+  if (!isRestTime(city, instant)) return null
+  const step = 10 * 60e3
+  let t = instant.getTime()
+  for (let i = 0; i < 6 * 24 * 4; i++) { // at most ~4 days (Shabbat + Yom Tov runs)
+    t += step
+    if (!isRestTime(city, new Date(t))) return new Date(t)
+  }
+  return new Date(t)
+}

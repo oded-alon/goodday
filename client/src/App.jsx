@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import * as store from './store.js'
 import { getAuthSnapshot, getSync, scheduleSync, subscribeSync, syncNow } from './sync.js'
-import { getWake, subscribeWake } from './wake.js'
+import { getWake, initWake, subscribeWake } from './wake.js'
 import { getSettings, subscribeSettings } from './settings.js'
 import { watchReminderPrefs } from './reminders.js'
 import { strings } from './i18n.js'
 import { cityById } from './core/cities.js'
 import { resolveDate } from './core/hebrew.js'
+import { isRestTime } from './core/rest.js'
 import { isPersistent } from './db.js'
 import { AppCtx } from './ctx.js'
 import { CalendarIcon, HeartIcon, SettingsIcon, StarIcon } from './ui.jsx'
@@ -15,6 +16,7 @@ import CalendarView from './CalendarView.jsx'
 import FamilyView from './FamilyView.jsx'
 import SettingsView from './SettingsView.jsx'
 import WakeDialog from './WakeDialog.jsx'
+import RestScreen from './RestScreen.jsx'
 
 export default function App() {
   const [tab, setTab] = useState('today')
@@ -30,6 +32,16 @@ export default function App() {
   const t = strings(lang)
   const city = cityById(settings.cityId)
 
+  // Theme: follow the device unless the user picked light or dark
+  useEffect(() => {
+    const root = document.documentElement
+    if (settings.theme === 'light' || settings.theme === 'dark') root.dataset.theme = settings.theme
+    else delete root.dataset.theme
+  }, [settings.theme])
+
+  // Shabbat and Yom Tov: the app does not run. (Quiet window as for notifications.)
+  const rest = useMemo(() => isRestTime(city, now), [city, now])
+
   useEffect(() => {
     document.documentElement.lang = lang
     document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr'
@@ -42,7 +54,9 @@ export default function App() {
     store.load()
     return watchReminderPrefs()
   }, [])
-  useEffect(() => { if (wake.status === 'ready') syncNow() }, [wake.status])
+  // Nothing talks to the network during the rest window; it starts when the rest ends
+  useEffect(() => { if (!rest) initWake() }, [rest])
+  useEffect(() => { if (wake.status === 'ready' && !rest) syncNow() }, [wake.status, rest])
 
   // Re-resolve "today" every 30 s so the Hebrew day flips by itself when the sun sets
   useEffect(() => {
@@ -64,6 +78,8 @@ export default function App() {
     () => new Set(entries.filter((e) => e.hebYear === resolved.hebrew.year && e.hebMonth === resolved.hebrew.month && e.hebDay === resolved.hebrew.day).map((e) => e.profileId)),
     [entries, resolved],
   )
+
+  if (rest) return <RestScreen city={city} now={now} lang={lang} t={t} />
 
   const ctx = { settings, lang, t, city, now, resolved, entries, visible, profiles, familyOn, writersToday, auth, sync, wake }
   const tabs = [

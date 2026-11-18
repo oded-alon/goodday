@@ -2,6 +2,7 @@
 const KEY = 'goodday.settings'
 
 export const DEFAULTS = {
+  theme: 'system', // system | light | dark
   lang: 'he', // Hebrew by default, English in settings (not tied to the phone language)
   cityId: 'jerusalem',
   useSunset: true,

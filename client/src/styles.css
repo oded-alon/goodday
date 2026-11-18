@@ -10,8 +10,18 @@
   --gold: #c9a24b; --night-top: #0b1a33; --night-bottom: #1f3b66; --night-text: #e6edf5;
   color-scheme: light;
 }
+:root[data-theme='dark'] {
+  --primary: #7fb2e5; --on-primary: #0b2540;
+  --primary-container: #1b3a5c; --on-primary-container: #d6e6f7;
+  --secondary: #9db8d6; --secondary-container: #22384f; --on-secondary-container: #dce8f5;
+  --tertiary: #e0be6a; --on-tertiary: #3b2e05; --tertiary-container: #4f3f0e; --on-tertiary-container: #f4e6b8;
+  --bg: #0b1624; --on-bg: #e6edf5; --surface: #12233a; --on-surface: #e6edf5;
+  --surface-variant: #1d3149; --on-surface-variant: #b2c3d6; --outline: #5d7590;
+  --danger: #f2b8b5;
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --primary: #7fb2e5; --on-primary: #0b2540;
     --primary-container: #1b3a5c; --on-primary-container: #d6e6f7;
     --secondary: #9db8d6; --secondary-container: #22384f; --on-secondary-container: #dce8f5;
@@ -65,7 +75,7 @@ button:disabled { opacity: .38; cursor: default; }
 .chip.on { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
 
 /* text fields */
-textarea, input[type=text], input[type=email], input[type=password], input[type=time], select {
+textarea, input[type=text], input[type=email], input[type=password], input[type=time], input[type=search], select {
   width: 100%; padding: 14px 16px; border-radius: 6px; border: 1px solid var(--outline); background: transparent; color: var(--on-surface);
 }
 textarea { resize: vertical; min-height: 5.5em; display: block; }
@@ -153,7 +163,7 @@ select option { color: #000; }
 
 /* dialogs */
 .overlay { position: fixed; inset: 0; background: rgba(8, 14, 22, .55); display: grid; place-items: center; padding: 16px; z-index: 10; }
-.dialog { background: var(--surface); color: var(--on-surface); border-radius: 28px; padding: 24px; max-width: 420px; width: 100%; max-height: 85vh; overflow: auto; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
+.dialog { background: var(--surface); color: var(--on-surface); border-radius: 28px; padding: 24px; max-width: 420px; width: 100%; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
 .dialog h2 { font-size: 22px; line-height: 28px; font-weight: 400; }
 .dialog .actions { display: flex; justify-content: flex-end; gap: 8px; }
 .progress { height: 8px; border-radius: 99px; background: var(--surface-variant); overflow: hidden; }
@@ -162,3 +172,12 @@ select option { color: #000; }
 @keyframes slide { from { margin-inline-start: 0; } to { margin-inline-start: 60%; } }
 .toast { position: fixed; bottom: 100px; inset-inline: 16px; max-width: 420px; margin: 0 auto; padding: 12px 16px; border-radius: 14px; background: var(--primary); color: var(--on-primary); text-align: center; z-index: 11; }
 @media (prefers-reduced-motion: reduce) { .bar, .composer, .gain { transition: none; } .bar.indeterminate { animation: none; } }
+
+/* rest screen: Shabbat and Yom Tov */
+.rest { min-height: 100vh; display: grid; place-items: center; padding: 24px; text-align: center; background: linear-gradient(var(--night-top), var(--night-bottom)); color: var(--night-text); }
+.rest .inner { max-width: 360px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.rest img { width: 96px; height: 96px; border-radius: 24px; }
+.rest h1 { font-size: 28px; line-height: 36px; font-weight: 600; }
+.rest p { opacity: .85; }
+.rest .until { color: var(--gold); font-weight: 500; }
+.search { position: sticky; top: 0; }

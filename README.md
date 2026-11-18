@@ -19,7 +19,8 @@ PWA with an Express + Firestore backend, designed for a **free Render instance t
 - **Today**: Hebrew date header (night variant after sunset: "counts as tomorrow"), write a good thing (mine / in the world), "a year ago on this Hebrew date" memories, rotating prompts.
 - **Calendar**: Hebrew month grid with activity heat, add entries to previous days (never the future).
 - **Family game** (one shared phone, member profiles): "who is writing", private-by-default entries with optional sharing, team goal of 7 days, personal points, streaks, full-house bonus.
-- **Settings**: Hebrew/English, 49 bundled cities for sunset (no GPS), sunset on/off, reminders, backup export/import (the same JSON format as the Android app, so a journal moves between them).
+- **Shabbat and Yom Tov**: the app does not run. It shows a rest screen (with when it returns) and makes no network calls, using the same quiet window as notifications (40 min before the sunset that starts it to 72 min after the one that ends it, per the chosen city; Israel vs diaspora second day).
+- **Settings**: Hebrew/English, light/dark/device theme, 105 bundled cities with search (62 of them Israeli) for sunset (no GPS), sunset on/off, reminders, backup export/import (the same JSON format as the Android app, so a journal moves between them).
 - **Reminders** via Web Push, never on Shabbat or Yom Tov (see below). The Android home-screen widget has no web equivalent.
 
 ## Reminders (Web Push) on a free Render instance

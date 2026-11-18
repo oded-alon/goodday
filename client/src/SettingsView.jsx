@@ -5,7 +5,7 @@ import { updateSettings } from './settings.js'
 import { setReminder } from './reminders.js'
 import { permission, pushSupported } from './push.js'
 import { authenticate, signOut } from './sync.js'
-import { CITIES, cityById, cityName } from './core/cities.js'
+import { cityById, cityName, searchCities } from './core/cities.js'
 import { sunsetOn } from './core/hebrew.js'
 import { BackupError, MAX_NAME, parseBackup, writeBackup } from './core/backup.js'
 import { Avatar, DeleteIcon, Dialog, Switch, timeText } from './ui.jsx'
@@ -68,11 +68,18 @@ function ReminderRow({ kind, title, desc }) {
 
 function CityPicker({ onClose }) {
   const { settings, lang, t } = useApp()
+  const [query, setQuery] = useState('')
+  const found = searchCities(query)
   return (
     <Dialog title={t.city} onClose={onClose} actions={<button className="btn text" onClick={onClose}>{t.close}</button>}>
-      <div>
-        {CITIES.map((c) => (
-          <button key={c.id} className="list-item" style={{ fontWeight: c.id === settings.cityId ? 700 : 400 }}
+      <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.searchCity} aria-label={t.searchCity}
+        autoComplete="off" enterKeyHint="search"
+        onKeyDown={(e) => { if (e.key === 'Enter' && found.length === 1) { updateSettings({ cityId: found[0].id }); onClose() } }} />
+      <div role="listbox" aria-label={t.city} style={{ overflowY: 'auto', minHeight: 0 }}>
+        {found.length === 0 && <p className="muted" style={{ padding: 12 }}>{t.noCities}</p>}
+        {found.map((c) => (
+          <button key={c.id} role="option" aria-selected={c.id === settings.cityId} className="list-item"
+            style={{ fontWeight: c.id === settings.cityId ? 700 : 400 }}
             onClick={() => { updateSettings({ cityId: c.id }); onClose() }}>{cityName(c, lang)}</button>
         ))}
       </div>
@@ -194,6 +201,15 @@ export default function SettingsView() {
   return (
     <section className="stack">
       <h1 className="headline">{t.settings}</h1>
+
+      <Card>
+        <h2 className="title-md">{t.appearance}</h2>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          {[['system', t.themeSystem], ['light', t.themeLight], ['dark', t.themeDark]].map(([k, label]) => (
+            <button key={k} className={'chip' + (settings.theme === k ? ' on' : '')} aria-pressed={settings.theme === k} onClick={() => updateSettings({ theme: k })}>{label}</button>
+          ))}
+        </div>
+      </Card>
 
       <Card>
         <h2 className="title-md">{t.language}</h2>
