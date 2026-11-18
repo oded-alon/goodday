@@ -50,14 +50,18 @@ export async function syncNow() {
       again = false
       let more = true
       while (more) {
-        const sent = store.dirtyEntries().slice(0, 400)
+        const sentProfiles = store.dirtyProfiles().slice(0, 100)
+        const sentEntries = store.dirtyEntries().slice(0, 400 - sentProfiles.length)
         const since = (await db.getMeta('cursor:' + auth.email)) || 0
-        const changes = sent.map(({ dirty, ...e }) => e) // eslint-disable-line no-unused-vars
-        const r = await api('/api/sync', { method: 'POST', token: auth.token, body: { changes, since }, timeout: 60_000 })
-        await store.markClean(sent, r.accepted)
-        await store.applyRemote(r.changes)
+        const strip = ({ dirty, ...rest }) => rest // eslint-disable-line no-unused-vars
+        const r = await api('/api/sync', {
+          method: 'POST', token: auth.token, timeout: 60_000,
+          body: { changes: sentEntries.map(strip), profiles: sentProfiles.map(strip), since },
+        })
+        await store.markClean(sentEntries, sentProfiles, r)
+        await store.applyRemote(r.changes, r.profiles)
         await db.setMeta('cursor:' + auth.email, r.cursor)
-        more = r.more || (sent.length === 400 && store.dirtyEntries().length > 0)
+        more = r.more || (store.hasDirty() && sentEntries.length + sentProfiles.length >= 400)
       }
     } while (again)
     setSync({ status: 'synced', at: Date.now() })

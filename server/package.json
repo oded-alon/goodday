@@ -2,6 +2,7 @@
   "name": "goodday-server",
   "version": "1.0.0",
   "private": true,
+  "engines": { "node": ">=22.12" },
   "main": "server.js",
   "scripts": {
     "dev": "node --watch server.js",
@@ -16,6 +17,7 @@
     "express-rate-limit": "^7.4.1",
     "firebase-admin": "^13.0.2",
     "helmet": "^8.0.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "web-push": "^4.0.0"
   }
 }

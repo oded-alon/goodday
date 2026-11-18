@@ -45,7 +45,7 @@ export default function WakeDialog({ t }) {
               <div className={wake.status === 'unreachable' ? 'bar indeterminate' : 'bar'} style={{ width: pct + '%' }} />
             </div>
             <p className="muted small">{t.wakeElapsed(elapsed)}</p>
-            <button className="primary" onClick={dismissWake} autoFocus>{t.wakeContinue}</button>
+            <button className="btn" onClick={dismissWake} autoFocus>{t.wakeContinue}</button>
           </div>
         </div>
       )}

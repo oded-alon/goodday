@@ -2,27 +2,33 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import * as store from './store.js'
 import { getAuthSnapshot, getSync, scheduleSync, subscribeSync, syncNow } from './sync.js'
 import { getWake, subscribeWake } from './wake.js'
-import { getLang, strings } from './i18n.js'
-import { hebrewToday } from './hebrew.js'
+import { getSettings, subscribeSettings } from './settings.js'
+import { watchReminderPrefs } from './reminders.js'
+import { strings } from './i18n.js'
+import { cityById } from './core/cities.js'
+import { resolveDate } from './core/hebrew.js'
 import { isPersistent } from './db.js'
-import { CalendarView, SettingsView, TodayView } from './views.jsx'
+import { AppCtx } from './ctx.js'
+import { CalendarIcon, HeartIcon, SettingsIcon, StarIcon } from './ui.jsx'
+import TodayView from './TodayView.jsx'
+import CalendarView from './CalendarView.jsx'
+import FamilyView from './FamilyView.jsx'
+import SettingsView from './SettingsView.jsx'
 import WakeDialog from './WakeDialog.jsx'
 
-const getCity = () => {
-  try { return localStorage.getItem('goodday.city') || 'jerusalem' } catch { return 'jerusalem' }
-}
-
 export default function App() {
-  const [lang, setLang] = useState(getLang)
-  const [cityId, setCity] = useState(getCity)
   const [tab, setTab] = useState('today')
-  const [tick, setTick] = useState(0)
+  const [now, setNow] = useState(() => new Date())
 
-  const t = strings(lang)
-  const { list, loaded } = useSyncExternalStore(store.subscribe, store.getSnapshot)
+  const settings = useSyncExternalStore(subscribeSettings, getSettings)
+  const { entries, profiles, loaded } = useSyncExternalStore(store.subscribe, store.getSnapshot)
   const wake = useSyncExternalStore(subscribeWake, getWake)
   const sync = useSyncExternalStore(subscribeSync, getSync)
   const auth = useSyncExternalStore(subscribeSync, getAuthSnapshot)
+
+  const lang = settings.lang
+  const t = strings(lang)
+  const city = cityById(settings.cityId)
 
   useEffect(() => {
     document.documentElement.lang = lang
@@ -34,58 +40,56 @@ export default function App() {
   useEffect(() => {
     store.setChangeHandler(() => scheduleSync())
     store.load()
+    return watchReminderPrefs()
   }, [])
-
   useEffect(() => { if (wake.status === 'ready') syncNow() }, [wake.status])
 
-  // Re-evaluate "today" every minute so the Hebrew day flips at sunset while the app is open
+  // Re-resolve "today" every 30 s so the Hebrew day flips by itself when the sun sets
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 60_000)
+    const id = setInterval(() => setNow(new Date()), 30_000)
     return () => clearInterval(id)
   }, [])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const today = useMemo(() => hebrewToday(cityId), [cityId, tick])
-  const todayKey = `${today.year}-${today.month}-${today.day}`
-  const stableToday = useMemo(() => today, [todayKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  const resolvedRaw = resolveDate(now, city, settings.useSunset)
+  const resolved = useMemo(() => resolvedRaw, [resolvedRaw.hebrew.year, resolvedRaw.hebrew.month, resolvedRaw.hebrew.day, resolvedRaw.afterNightfall, settings.cityId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setCityId = (id) => {
-    try { localStorage.setItem('goodday.city', id) } catch { /* ignore */ }
-    setCity(id)
-  }
+  // The Family tab exists only while the game is on
+  const familyOn = settings.familyEnabled && profiles.length > 0
+  const current = tab === 'family' && !familyOn ? 'today' : tab
+  // Whose entries to show: the member holding the phone, or everyone when the game is off
+  const visible = useMemo(
+    () => (familyOn ? entries.filter((e) => e.profileId === settings.activeProfileId) : entries),
+    [entries, familyOn, settings.activeProfileId],
+  )
+  const writersToday = useMemo(
+    () => new Set(entries.filter((e) => e.hebYear === resolved.hebrew.year && e.hebMonth === resolved.hebrew.month && e.hebDay === resolved.hebrew.day).map((e) => e.profileId)),
+    [entries, resolved],
+  )
 
-  const badge = !auth ? t.syncLocal
-    : wake.status === 'offline' ? t.syncLocal
-    : sync.status === 'synced' ? t.syncSynced
-    : sync.status === 'syncing' ? t.syncSyncing
-    : sync.status === 'error' ? t.syncError
-    : t.syncWaiting
-
-  const tabs = [['today', t.today], ['calendar', t.calendar], ['settings', t.settings]]
+  const ctx = { settings, lang, t, city, now, resolved, entries, visible, profiles, familyOn, writersToday, auth, sync, wake }
+  const tabs = [
+    ['today', t.today, HeartIcon],
+    ['calendar', t.calendar, CalendarIcon],
+    ...(familyOn ? [['family', t.family, StarIcon]] : []),
+    ['settings', t.settings, SettingsIcon],
+  ]
   return (
-    <div className="app">
-      <header className="top">
-        <span className="brand">{t.appName}</span>
-        <span className={'badge ' + (auth ? sync.status : 'local')}>{badge}</span>
-      </header>
-      {wake.status === 'offline' && <p className="banner">{t.offlineBanner}</p>}
-      {loaded && !isPersistent() && <p className="banner warn">{t.notPersistent}</p>}
-      <main>
-        {!loaded ? null : tab === 'today' ? (
-          <TodayView entries={list} today={stableToday} lang={lang} t={t} />
-        ) : tab === 'calendar' ? (
-          <CalendarView entries={list} today={stableToday} lang={lang} t={t} />
-        ) : (
-          <SettingsView lang={lang} setLang={setLang} cityId={cityId} setCityId={setCityId} auth={auth} t={t}
-            online={wake.status !== 'offline'} />
-        )}
-      </main>
-      <nav className="tabs">
-        {tabs.map(([k, label]) => (
-          <button key={k} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}
-            onClick={() => setTab(k)}>{label}</button>
-        ))}
-      </nav>
-      <WakeDialog t={t} />
-    </div>
+    <AppCtx.Provider value={ctx}>
+      <div className="app">
+        {wake.status === 'offline' && <p className="banner" role="status">{t.offlineBanner}</p>}
+        {loaded && !isPersistent() && <p className="banner warn">{t.notPersistent}</p>}
+        <main>
+          {!loaded ? null : current === 'today' ? <TodayView /> : current === 'calendar' ? <CalendarView />
+            : current === 'family' ? <FamilyView /> : <SettingsView />}
+        </main>
+        <nav className="tabs">
+          {tabs.map(([k, label, Icon]) => (
+            <button key={k} aria-current={current === k ? 'page' : undefined} onClick={() => setTab(k)}>
+              <span className="ind"><Icon /></span>{label}
+            </button>
+          ))}
+        </nav>
+        <WakeDialog t={t} />
+      </div>
+    </AppCtx.Provider>
   )
 }

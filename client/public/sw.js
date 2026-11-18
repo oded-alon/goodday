@@ -1,7 +1,7 @@
 // Stale-while-revalidate for the app shell and assets. The key point for a sleeping free Render
 // instance: the page and its JS/CSS come from cache immediately, instead of waiting 30-60 s for the
 // server. /api requests are never touched here (the app handles them itself).
-const CACHE = 'goodday-shell-v1'
+const CACHE = 'goodday-shell-v2'
 const PRECACHE = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
 
 self.addEventListener('install', (event) => {
@@ -43,6 +43,34 @@ self.addEventListener('fetch', (event) => {
         return cached
       }
       return network.then((res) => res || Response.error())
+    }),
+  )
+})
+
+// ---- Web Push reminders -----------------------------------------------------------------------------
+// The server decides what and when (and never during Shabbat or Yom Tov, with a short TTL so a delayed
+// push is dropped rather than shown late). Here we only display it.
+self.addEventListener('push', (event) => {
+  let data = {}
+  try { data = event.data ? event.data.json() : {} } catch { /* plain text push */ }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Yom Tov', {
+      body: data.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.tag || 'goodday-reminder',
+      lang: /[֐-׿]/.test(data.body || '') ? 'he' : 'en',
+      dir: /[֐-׿]/.test(data.body || '') ? 'rtl' : 'ltr',
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => new URL(w.url).origin === self.location.origin)
+      return open ? open.focus() : self.clients.openWindow('/')
     }),
   )
 })

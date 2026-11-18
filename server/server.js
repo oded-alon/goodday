@@ -29,6 +29,7 @@ app.use('/api', limit(60_000, 120))
 
 app.use('/api/auth', limit(15 * 60_000, 20), require('./api/auth'))
 app.use('/api/sync', require('./api/sync'))
+app.use('/api/push', require('./api/push'))
 app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }))
 
 const dist = path.resolve(__dirname, '../client/dist')
