@@ -3,12 +3,30 @@ import { useApp } from './ctx.js'
 import { addMember, importBackup, removeMember } from './store.js'
 import { updateSettings } from './settings.js'
 import { setReminder } from './reminders.js'
+import { promptInstall, useInstallState } from './install.js'
 import { permission, pushSupported } from './push.js'
 import { authenticate, signOut } from './sync.js'
 import { cityById, cityName, searchCities } from './core/cities.js'
 import { sunsetOn } from './core/hebrew.js'
 import { BackupError, MAX_NAME, parseBackup, writeBackup } from './core/backup.js'
 import { Avatar, DeleteIcon, Dialog, Switch, timeText } from './ui.jsx'
+
+const QUIET_UNTIL_HOUR = 6
+
+function InstallCard() {
+  const { t } = useApp()
+  const state = useInstallState()
+  if (state === 'installed' || state === 'none') return null
+  return (
+    <Card>
+      <h2 className="title-md">{t.installTitle}</h2>
+      <p className="muted">{t.installDesc}</p>
+      {state === 'prompt'
+        ? <button className="btn" style={{ alignSelf: 'flex-start' }} onClick={promptInstall}>{t.installBtn}</button>
+        : <p>{t.installIos}</p>}
+    </Card>
+  )
+}
 
 const Card = ({ children }) => <div className="card lg field">{children}</div>
 
@@ -42,6 +60,8 @@ function ReminderRow({ kind, title, desc }) {
     setTime(`${String(Math.floor(cfg.minute / 60)).padStart(2, '0')}:${String(cfg.minute % 60).padStart(2, '0')}`)
     setEditing(true)
   }
+  // The cron job that triggers reminders only runs 06:00-24:00.
+  const quiet = /^\d\d:\d\d$/.test(time) && Number(time.slice(0, 2)) < QUIET_UNTIL_HOUR
   return (
     <>
       <SwitchRow
@@ -53,13 +73,14 @@ function ReminderRow({ kind, title, desc }) {
         <Dialog title={t.setTime} onClose={() => setEditing(false)}
           actions={<>
             <button className="btn text" onClick={() => setEditing(false)}>{t.cancel}</button>
-            <button className="btn text" disabled={!time} onClick={() => {
+            <button className="btn text" disabled={!time || quiet} onClick={() => {
               const [h, m] = time.split(':').map(Number)
               setReminder(kind, { minute: h * 60 + m })
               setEditing(false)
             }}>{t.ok}</button>
           </>}>
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} dir="ltr" />
+          {quiet && <p className="error label-lg">{t.nightWarn}</p>}
         </Dialog>
       )}
     </>
@@ -202,6 +223,8 @@ export default function SettingsView() {
     <section className="stack">
       <h1 className="headline">{t.settings}</h1>
 
+      <InstallCard />
+
       <Card>
         <h2 className="title-md">{t.appearance}</h2>
         <div className="row" style={{ flexWrap: 'wrap' }}>
@@ -243,6 +266,7 @@ export default function SettingsView() {
 
       <h2 className="title-lg">{t.reminders}</h2>
       <p className="muted">{t.restNote}</p>
+      <div className="card tertiary"><p>{t.nightNote}</p></div>
       {blocked && <div className="card tertiary"><p>{t.notifBlocked}</p></div>}
       <Card>
         <ReminderRow kind="evening" title={t.evening} desc={t.eveningDesc} />
