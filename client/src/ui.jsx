@@ -57,7 +57,7 @@ export const timeText = (minuteOfDay, lang) =>
   new Date(2000, 0, 1, Math.floor(minuteOfDay / 60), minuteOfDay % 60)
     .toLocaleTimeString(lang === 'he' ? 'he-IL' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
 
-export function EntryCard({ entry, lang, cityId, t, onDelete }) {
+export function EntryCard({ entry, lang, cityId, t, onDelete, author }) {
   const zone = cityById(cityId).zone
   const time = new Date(entry.createdAt).toLocaleTimeString(lang === 'he' ? 'he-IL' : 'en-GB', { hour: '2-digit', minute: '2-digit', timeZone: zone })
   const label = entry.type === 'me' ? t.typeMe : t.typeWorld
@@ -66,7 +66,7 @@ export function EntryCard({ entry, lang, cityId, t, onDelete }) {
       <span className="dot" />
       <div className="grow">
         <p>{entry.text}</p>
-        <p className="meta">{label} · {time}{entry.shared ? ' · ' + t.sharedBadge : ''}</p>
+        <p className="meta">{author ? author + ' · ' : ''}{label} · {time}{entry.shared ? ' · ' + t.sharedBadge : ' · ' + t.privateBadge}</p>
       </div>
       <button className="icon-btn" onClick={onDelete} aria-label={t.del}><DeleteIcon /></button>
     </li>

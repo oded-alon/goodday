@@ -15,6 +15,8 @@ import TodayView from './TodayView.jsx'
 import CalendarView from './CalendarView.jsx'
 import FamilyView from './FamilyView.jsx'
 import SettingsView from './SettingsView.jsx'
+import { visibleEntries } from './core/visibility.js'
+import { ViewerBar } from './FamilyPickers.jsx'
 import WakeDialog from './WakeDialog.jsx'
 import RestScreen from './RestScreen.jsx'
 
@@ -69,10 +71,12 @@ export default function App() {
   // The Family tab exists only while the game is on
   const familyOn = settings.familyEnabled && profiles.length > 0
   const current = tab === 'family' && !familyOn ? 'today' : tab
-  // Whose entries to show: the member holding the phone, or everyone when the game is off
+  // What to show: everything when the game is off; otherwise shared entries plus the private ones of
+  // the member being viewed as (none by default)
+  const viewerId = familyOn && profiles.some((p) => p.id === settings.viewerId) ? settings.viewerId : ''
   const visible = useMemo(
-    () => (familyOn ? entries.filter((e) => e.profileId === settings.activeProfileId) : entries),
-    [entries, familyOn, settings.activeProfileId],
+    () => visibleEntries(entries, familyOn, viewerId),
+    [entries, familyOn, viewerId],
   )
   const writersToday = useMemo(
     () => new Set(entries.filter((e) => e.hebYear === resolved.hebrew.year && e.hebMonth === resolved.hebrew.month && e.hebDay === resolved.hebrew.day).map((e) => e.profileId)),
@@ -81,7 +85,7 @@ export default function App() {
 
   if (rest) return <RestScreen city={city} now={now} lang={lang} t={t} />
 
-  const ctx = { settings, lang, t, city, now, resolved, entries, visible, profiles, familyOn, writersToday, auth, sync, wake }
+  const ctx = { settings, lang, t, city, now, resolved, entries, visible, viewerId, profiles, familyOn, writersToday, auth, sync, wake }
   const tabs = [
     ['today', t.today, HeartIcon],
     ['calendar', t.calendar, CalendarIcon],
@@ -93,6 +97,7 @@ export default function App() {
       <div className="app">
         {wake.status === 'offline' && <p className="banner" role="status">{t.offlineBanner}</p>}
         {loaded && !isPersistent() && <p className="banner warn">{t.notPersistent}</p>}
+        {familyOn && (current === 'today' || current === 'calendar') && <ViewerBar />}
         <main>
           {!loaded ? null : current === 'today' ? <TodayView /> : current === 'calendar' ? <CalendarView />
             : current === 'family' ? <FamilyView /> : <SettingsView />}

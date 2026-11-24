@@ -48,21 +48,17 @@ async function saveProfiles(list) {
   onLocalChange()
 }
 
-/** Whose entries belong to the phone holder right now ('' = nobody in particular / game off). */
-export function currentProfileId() {
-  const s = getSettings()
-  return s.familyEnabled ? s.activeProfileId : ''
-}
-
-export async function addEntry({ text, type, date, afterNightfall = false, shared = false }) {
+/** `profileId` is the writer, picked per entry; it is required while the family game is on. */
+export async function addEntry({ text, type, date, afterNightfall = false, shared = false, profileId = '' }) {
   const clean = text.trim()
   if (!clean) return null
+  if (getSettings().familyEnabled && !profileId) return null
   const now = Date.now()
   const s = getSettings()
   const e = {
     id: uid(), text: clean, type,
     hebYear: date.year, hebMonth: date.month, hebDay: date.day,
-    afterNightfall, profileId: currentProfileId(), shared: s.familyEnabled && shared,
+    afterNightfall, profileId, shared: s.familyEnabled && shared,
     createdAt: now, updatedAt: now, deleted: false, dirty: true,
   }
   await saveEntries([e])
@@ -87,7 +83,7 @@ export async function addMember(name) {
   if (existing === 0) {
     const orphans = snapshot.entries.filter((e) => !e.profileId).map((e) => ({ ...e, profileId: p.id, updatedAt: now, dirty: true }))
     if (orphans.length) await saveEntries(orphans)
-    updateSettings({ familyEnabled: true, activeProfileId: p.id })
+    updateSettings({ familyEnabled: true })
   }
   await saveProfiles([p])
 }
@@ -101,8 +97,8 @@ export async function removeMember(id) {
   if (theirs.length) await saveEntries(theirs)
   await saveProfiles([{ ...cur, deleted: true, name: '', updatedAt: now, dirty: true }])
   const remaining = snapshot.profiles
-  if (!remaining.length) updateSettings({ familyEnabled: false, activeProfileId: '' })
-  else if (getSettings().activeProfileId === id) updateSettings({ activeProfileId: remaining[0].id })
+  if (!remaining.length) updateSettings({ familyEnabled: false, viewerId: '' })
+  else if (getSettings().viewerId === id) updateSettings({ viewerId: '' })
 }
 
 // ---- backup import: merge, never wipes ---------------------------------------------------------------
@@ -135,9 +131,7 @@ export async function importBackup(parsed) {
   }
   if (newProfiles.length) await saveProfiles(newProfiles)
   if (added.length) await saveEntries(added)
-  if (newProfiles.length && !getSettings().activeProfileId) {
-    updateSettings({ familyEnabled: true, activeProfileId: newProfiles[0].id })
-  }
+  if (newProfiles.length) updateSettings({ familyEnabled: true })
   return { added: added.length, dupes, members: newProfiles.length, skipped: parsed.skippedEntries }
 }
 
@@ -183,11 +177,8 @@ export async function applyRemote(entryList, profileList) {
   const a = await applyList(profiles, profileList || [], db.putProfiles)
   const b = await applyList(entries, entryList || [], db.putEntries)
   if (a || b) emit()
-  // Signed in on a new device: adopt the first synced member as the phone holder
-  const s = getSettings()
-  if (snapshot.profiles.length && !snapshot.profiles.some((p) => p.id === s.activeProfileId)) {
-    updateSettings({ familyEnabled: true, activeProfileId: snapshot.profiles[0].id })
-  }
+  // Signed in on a new device: members arrived, so switch the family game on
+  if (snapshot.profiles.length && !getSettings().familyEnabled) updateSettings({ familyEnabled: true })
 }
 
 export async function wipe() {

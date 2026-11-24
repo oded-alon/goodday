@@ -181,3 +181,4 @@ select option { color: #000; }
 .rest p { opacity: .85; }
 .rest .until { color: var(--gold); font-weight: 500; }
 .search { position: sticky; top: 0; }
+.viewerbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px 0; }

@@ -7,7 +7,7 @@ export const DEFAULTS = {
   cityId: 'jerusalem',
   useSunset: true,
   familyEnabled: false,
-  activeProfileId: '',
+  viewerId: '', // whose private entries are shown ('' = shared entries only)
   evening: { enabled: false, minute: 21 * 60 },
   morning: { enabled: false, minute: 8 * 60 },
   reminderPromptDismissed: false,

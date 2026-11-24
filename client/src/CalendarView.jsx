@@ -6,6 +6,7 @@ import {
 } from './core/hebrew.js'
 import { ArrowIcon, Dialog, EntryCard, fullGregorian } from './ui.jsx'
 import { sameDate } from './TodayView.jsx'
+import { WriterStrip } from './FamilyPickers.jsx'
 
 /** Write a good thing for a day that already passed. The title names the day, so it is always clear where it lands. */
 function AddToDayDialog({ date, onClose }) {
@@ -13,10 +14,11 @@ function AddToDayDialog({ date, onClose }) {
   const [type, setType] = useState('me')
   const [text, setText] = useState('')
   const [share, setShare] = useState(false)
+  const [writer, setWriter] = useState('')
   const label = `${dayLabel(date.day, lang)} ${monthName(date.year, date.month, lang)}`
   const save = async () => {
     // Written later, so it was not written after that day's sunset: afterNightfall stays false
-    await addEntry({ text, type, date, shared: share })
+    await addEntry({ text, type, date, shared: share, profileId: writer })
     onClose()
   }
   return (
@@ -24,9 +26,10 @@ function AddToDayDialog({ date, onClose }) {
       title={t.addToDayTitle(label)} onClose={onClose}
       actions={<>
         <button className="btn text" onClick={onClose}>{t.cancel}</button>
-        <button className="btn text" onClick={save} disabled={!text.trim()}>{t.save}</button>
+        <button className="btn text" onClick={save} disabled={!text.trim() || (familyOn && !writer)}>{t.save}</button>
       </>}
     >
+      {familyOn && <WriterStrip value={writer} onChange={setWriter} />}
       <div className="row">
         {[['me', t.typeMe], ['world', t.typeWorld]].map(([k, l]) => (
           <button key={k} className={'chip' + (type === k ? ' on' : '')} aria-pressed={type === k} onClick={() => setType(k)}>{l}</button>
@@ -42,7 +45,7 @@ function AddToDayDialog({ date, onClose }) {
 }
 
 export default function CalendarView() {
-  const { resolved, visible, lang, settings, t } = useApp()
+  const { resolved, visible, lang, settings, familyOn, profiles, t } = useApp()
   const today = resolved.hebrew
   const [month, setMonth] = useState({ year: today.year, month: today.month })
   const [selected, setSelected] = useState(today)
@@ -108,7 +111,7 @@ export default function CalendarView() {
         <p className="muted" style={{ fontSize: 16 }}>{t.nothingThisDay}</p>
       ) : (
         <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          {dayEntries.map((e) => <EntryCard key={e.id} entry={e} lang={lang} cityId={settings.cityId} t={t} onDelete={() => removeEntry(e.id)} />)}
+          {dayEntries.map((e) => <EntryCard key={e.id} entry={e} lang={lang} cityId={settings.cityId} t={t} onDelete={() => removeEntry(e.id)} author={familyOn ? profiles.find((p) => p.id === e.profileId)?.name : ''} />)}
         </ul>
       )}
     </section>
